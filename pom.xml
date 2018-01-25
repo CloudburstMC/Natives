@@ -16,6 +16,19 @@
             </plugin>
         </plugins>
     </build>
+	
+	<distributionManagement>
+        <repository>
+            <id>central</id>
+            <name>potestas-releases</name>
+            <url>https://repo.potestas.xyz/main</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>potestas-snapshots</name>
+            <url>https://repo.potestas.xyz/main</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>
