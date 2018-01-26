@@ -47,7 +47,7 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport</artifactId>
             <version>4.0.40.Final</version>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
