@@ -28,7 +28,7 @@
 
     <distributionManagement>
         <repository>
-            <id>central</id>
+            <id>releases</id>
             <name>nukkitx-releases</name>
             <url>https://repo.nukkitx.com/release</url>
         </repository>
