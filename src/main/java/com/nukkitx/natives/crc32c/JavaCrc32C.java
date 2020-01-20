@@ -571,7 +571,7 @@ public class JavaCrc32C implements Crc32C {
     @Override
     public void update(ByteBuffer buffer) {
         int localCrc = crc;
-        while (buffer.limit() > 7) {
+        while (buffer.remaining() > 7) {
             int c0 = buffer.get() ^ localCrc;
             localCrc >>>= 8;
             int c1 = buffer.get() ^ (localCrc);
@@ -585,7 +585,7 @@ public class JavaCrc32C implements Crc32C {
             localCrc ^= (T8_3[buffer.get() & 0xff] ^ T8_2[buffer.get() & 0xff])
                     ^ (T8_1[buffer.get() & 0xff] ^ T8_0[buffer.get() & 0xff]);
         }
-        while (buffer.limit() > 0) {
+        while (buffer.remaining() > 0) {
             localCrc = (localCrc >>> 8) ^ T8_0[(localCrc ^ buffer.get()) & 0xff];
         }
 
