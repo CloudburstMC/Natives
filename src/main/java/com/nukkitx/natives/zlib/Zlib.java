@@ -3,7 +3,7 @@ package com.nukkitx.natives.zlib;
 import java.util.function.Supplier;
 
 public final class Zlib {
-    static final ThreadLocal<byte[]> WRITE_BYTES = ThreadLocal.withInitial(() -> new byte[8192]);
+    static final int CHUNK_BYTES = 8192;
 
     private static final Zlib ZLIB_JAVA = new Zlib(JavaInflater::new, JavaDeflater::new);
     public static final Supplier<Zlib> JAVA = () -> ZLIB_JAVA;

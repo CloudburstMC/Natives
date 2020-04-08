@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 
 public class JavaDeflater implements Deflater {
 
+    private final byte[] chunkBytes = new byte[Zlib.CHUNK_BYTES];
     private final java.util.zip.Deflater deflater;
 
     JavaDeflater(int level, boolean nowrap) {
@@ -32,18 +33,11 @@ public class JavaDeflater implements Deflater {
         if (output.hasArray()) {
             return this.deflater.deflate(output.array(), output.arrayOffset(), output.remaining());
         } else {
-            byte[] localBytes = Zlib.WRITE_BYTES.get();
-
             int startPos = output.position();
             while (output.remaining() > 0 && !this.deflater.finished()) {
-                byte[] bytes;
-                if (output.remaining() < 8192) {
-                    bytes = new byte[output.remaining()];
-                } else {
-                    bytes = localBytes;
-                }
-                int result = this.deflater.deflate(bytes);
-                output.put(bytes, 0, result);
+                int length = Math.min(output.remaining(), Zlib.CHUNK_BYTES);
+                int result = this.deflater.deflate(this.chunkBytes, 0, length);
+                output.put(this.chunkBytes, 0, result);
             }
             return output.position() - startPos;
         }

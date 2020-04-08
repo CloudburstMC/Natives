@@ -5,6 +5,7 @@ import java.util.zip.DataFormatException;
 
 public class JavaInflater implements Inflater {
 
+    private final byte[] chunkBytes = new byte[Zlib.CHUNK_BYTES];
     private final java.util.zip.Inflater inflater;
 
     JavaInflater(boolean nowrap) {
@@ -27,18 +28,11 @@ public class JavaInflater implements Inflater {
         if (output.hasArray()) {
             return this.inflater.inflate(output.array(), output.arrayOffset(), output.remaining());
         } else {
-            byte[] localBytes = Zlib.WRITE_BYTES.get();
-
             int startPos = output.position();
             while (output.remaining() > 0 && !this.inflater.finished()) {
-                byte[] bytes;
-                if (output.remaining() < 8192) {
-                    bytes = new byte[output.remaining()];
-                } else {
-                    bytes = localBytes;
-                }
-                int result = this.inflater.inflate(bytes);
-                output.put(bytes, 0, result);
+                int length = Math.min(output.remaining(), Zlib.CHUNK_BYTES);
+                int result = this.inflater.inflate(this.chunkBytes, 0, length);
+                output.put(this.chunkBytes, 0, result);
             }
             return output.position() - startPos;
         }
