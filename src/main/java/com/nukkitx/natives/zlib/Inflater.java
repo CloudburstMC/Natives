@@ -17,6 +17,8 @@ public interface Inflater extends Native {
 
     void reset();
 
+    long getBytesRead();
+
     interface Factory {
         Inflater newInstance(boolean nowrap);
     }
