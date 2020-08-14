@@ -15,7 +15,7 @@ public class JavaInflater implements Inflater {
     @Override
     public void setInput(ByteBuffer input) {
         if (input.hasArray()) {
-            this.inflater.setInput(input.array(), input.arrayOffset(), input.remaining());
+            this.inflater.setInput(input.array(), input.arrayOffset() + input.position(), input.remaining());
         } else {
             byte[] bytes = new byte[input.remaining()];
             input.get(bytes);
@@ -26,7 +26,7 @@ public class JavaInflater implements Inflater {
     @Override
     public int inflate(ByteBuffer output) throws DataFormatException {
         if (output.hasArray()) {
-            return this.inflater.inflate(output.array(), output.arrayOffset(), output.remaining());
+            return this.inflater.inflate(output.array(), output.arrayOffset() + output.position(), output.remaining());
         } else {
             int startPos = output.position();
             while (output.remaining() > 0 && !this.inflater.finished()) {
