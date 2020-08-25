@@ -54,6 +54,11 @@ public class JavaInflater implements Inflater {
     }
 
     @Override
+    public long getBytesRead() {
+        return this.inflater.getBytesRead();
+    }
+
+    @Override
     public void free() {
         this.inflater.end();
     }
