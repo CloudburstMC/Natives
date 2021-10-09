@@ -5,7 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>natives</artifactId>
     <groupId>com.nukkitx</groupId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
+    <name>Natives</name>
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
