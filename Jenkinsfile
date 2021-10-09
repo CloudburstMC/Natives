@@ -56,7 +56,6 @@ pipeline {
                                 deployerId: "maven-deployer",
                                 resolverId: "maven-resolver"
                         )
-                        sh 'mvn javadoc:javadoc -DskipTests'
                     }
                 }
 
