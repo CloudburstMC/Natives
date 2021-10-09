@@ -70,7 +70,7 @@
                     <optimize>true</optimize>
                     <showDeprecation>true</showDeprecation>
                     <showWarnings>true</showWarnings>
-                    <compilerArgument>-Xlint:-options</compilerArgument>
+                    <compilerArgument>-Xlint:-options --add-opens java.base/java.lang=ALL-UNNAMED</compilerArgument>
                     <meminitial>256m</meminitial>
                     <maxmem>1024m</maxmem>
                     <excludes>
