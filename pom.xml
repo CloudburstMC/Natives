@@ -3,69 +3,272 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>9</version>
+    </parent>
+
+    <groupId>org.cloudburstmc</groupId>
     <artifactId>natives</artifactId>
-    <groupId>com.nukkitx</groupId>
-    <version>1.0.3</version>
+    <version>0.0.1-Final-SNAPSHOT</version>
     <name>Natives</name>
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
+        <javaModuleName>org.cloudburstmc.natives</javaModuleName>
+        <packaging.type>jar</packaging.type>
+        <junit.version>5.7.0</junit.version>
         <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
-
-        <exe.make>make</exe.make>
-        <exe.compiler>gcc</exe.compiler>
-        <exe.archiver>ar</exe.archiver>
-        <nativeLibName>libnukkit-natives</nativeLibName>
-        <nativeIncludeDir>${project.basedir}/src/main/c</nativeIncludeDir>
-        <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
-        <nativeObjsOnlyDir>${project.build.directory}/native-objs-only</nativeObjsOnlyDir>
+        <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
         <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
-        <defaultJarFile>${project.build.directory}/${project.build.finalName}.jar</defaultJarFile>
-        <nativeJarFile>${project.build.directory}/${project.build.finalName}-${jni.classifier}.jar</nativeJarFile>
+        <jniLibName>cb_natives_${os.detected.name}_${os.detected.arch}</jniLibName>
+
+        <!-- Libdeflate -->
+        <libdeflateSourceDir>${project.build.directory}/libdeflate-source</libdeflateSourceDir>
+        <libdeflateHomeDir>${project.build.directory}/libdeflate</libdeflateHomeDir>
+        <libdeflateHomeBuildDir>${libdeflateHomeDir}/build</libdeflateHomeBuildDir>
+        <libdeflateHomeIncludeDir>${libdeflateHomeDir}/include</libdeflateHomeIncludeDir>
+        <libdeflateRepository>https://github.com/ebiggers/libdeflate</libdeflateRepository>
+        <libdeflateBranch>master</libdeflateBranch>
+        <libdeflateCommitSha>047aa84e01b38d82f3612810e357bd40f14a3d39</libdeflateCommitSha>
+
+        <!-- Cloudflare Zlib -->
+        <zlibSourceDir>${project.build.directory}/zlib-source</zlibSourceDir>
+        <zlibBuildDir>${zlibSourceDir}/target/release</zlibBuildDir>
+        <zlibHomeDir>${project.build.directory}/zlib</zlibHomeDir>
+        <zlibHomeBuildDir>${zlibHomeDir}/build</zlibHomeBuildDir>
+        <zlibHomeIncludeDir>${zlibHomeDir}/include</zlibHomeIncludeDir>
+        <zlibRepository>https://github.com/cloudflare/zlib</zlibRepository>
+        <zlibBranch>gcc.amd64</zlibBranch>
+        <zlibCommitSha>959b4ea305821e753385e873ec4edfaa9a5d49b7</zlibCommitSha>
+
+        <!-- Misc -->
+        <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
+        <templateDir>${project.build.directory}/template</templateDir>
+        <cargoTarget />
+        <cflags>-std=gnu99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${libdeflateHomeIncludeDir}</cflags>
+        <ldflags>-L${libdeflateHomeBuildDir}</ldflags>
+        <extraCmakeFlags />
+        <extraCflags />
+        <extraCxxflags />
+        <extraLdflags />
+        <extraConfigureArg />
+        <extraConfigureArg2 />
+        <!-- We need 10.12 as minimum to compile zlib and use it.
+             Anything below will fail when trying to load zlib with:
+             Symbol not found: ___isPlatformVersionAtLeast
+        -->
+        <macosxDeploymentTarget />
+        <test.argLine>-D_</test.argLine>
+        <bundleNativeCode />
+        <crossCompile />
+        <libdeflate />
     </properties>
 
-    <distributionManagement>
-        <repository>
-            <id>releases</id>
-            <name>nukkitx-releases</name>
-            <url>https://repo.nukkitx.com/release</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <name>nukkitx-snapshots</name>
-            <url>https://repo.nukkitx.com/snapshot</url>
-        </snapshotRepository>
-    </distributionManagement>
-
-    <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <profiles>
+        <profile>
+            <id>linux</id>
+            <activation>
+                <os>
+                    <family>linux</family>
+                </os>
+                <property>
+                    <name>!android</name>
+                </property>
+            </activation>
+            <properties>
+                <extraCflags>-O3 -fno-omit-frame-pointer</extraCflags>
+                <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
+                <!-- On *nix, add ASM flags to disable executable stack -->
+                <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
+                <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+                <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building libdeflate on centos 6 -->
+                <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
+                <libdeflate>libdeflate.a</libdeflate>
+                <libzlib>libzlib.a</libzlib>
+                <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
+                <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
+            </properties>
+        </profile>
+    </profiles>
 
     <build>
         <extensions>
             <extension>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
-                <version>1.6.2</version>
+                <version>1.7.0</version>
             </extension>
         </extensions>
 
         <plugins>
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${nativeSourceDirectory}</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant</artifactId>
+                        <version>1.10.11</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant-commons-net</artifactId>
+                        <version>1.9.6</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>ant-contrib</groupId>
+                        <artifactId>ant-contrib</artifactId>
+                        <version>1.0b3</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>build-libdeflate</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- Add the ant tasks from ant-contrib -->
+                                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+                                <property environment="env" />
+                                <if>
+                                    <available file="${libdeflateHomeDir}" />
+                                    <then>
+                                        <echo message="libdeflate was already build, skipping the build step." />
+                                    </then>
+                                    <else>
+                                        <if>
+                                            <available file="${libdeflateSourceDir}" />
+                                            <then>
+                                                <echo message="libdeflate was already cloned, skipping the clone step." />
+                                            </then>
+                                            <else>
+                                                <echo message="Clone libdeflate" />
+
+                                                <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
+                                                    <arg value="clone" />
+                                                    <arg value="--branch" />
+                                                    <arg value="${libdeflateBranch}" />
+                                                    <arg value="${libdeflateRepository}" />
+                                                    <arg value="${libdeflateSourceDir}" />
+                                                </exec>
+                                            </else>
+                                        </if>
+
+                                        <echo message="Building libdeflate" />
+
+                                        <!-- Use the known SHA of the commit -->
+                                        <exec executable="git" failonerror="true" dir="${libdeflateSourceDir}" resolveexecutable="true">
+                                            <arg value="checkout" />
+                                            <arg value="${libdeflateCommitSha}" />
+                                        </exec>
+
+                                        <exec executable="make" failonerror="true" dir="${libdeflateSourceDir}" resolveexecutable="true">
+                                            <arg value="-e" />
+                                            <arg value="libdeflate.a" />
+                                        </exec>
+
+                                        <mkdir dir="${libdeflateHomeBuildDir}" />
+                                        <copy file="${libdeflateSourceDir}/${libdeflate}" todir="${libdeflateHomeBuildDir}" verbose="true" />
+                                        <copy file="${libdeflateSourceDir}/libdeflate.h" todir="${libdeflateHomeIncludeDir}" verbose="true" />
+                                    </else>
+                                </if>
+                            </target>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>copy-src</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- Copy all of the c code -->
+                                <delete dir="${generatedSourcesDir}" quiet="true" />
+                                <copy todir="${generatedSourcesDir}/c">
+                                    <fileset dir="${project.basedir}/src/main/c" />
+                                </copy>
+                            </target>
+                        </configuration>
+                    </execution>
+
+                    <!-- Copy the native lib that was generated and the license material for attribution -->
+                    <execution>
+                        <id>copy-native-lib-and-license</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- Add the ant tasks from ant-contrib -->
+                                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                                <copy todir="${project.build.outputDirectory}" includeEmptyDirs="false">
+                                    <zipfileset dir="${nativeLibOnlyDir}/META-INF/native" />
+                                    <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/\1" />
+                                </copy>
+
+                                <!-- Copy license material for attribution-->
+                                <copy file="NOTICE.txt" todir="${project.build.outputDirectory}/META-INF/" />
+                                <copy file="LICENSE.txt" todir="${project.build.outputDirectory}/META-INF/" />
+                                <copy todir="${project.build.outputDirectory}/META-INF/license">
+                                    <fileset dir="license" />
+                                </copy>
+
+                            </target>
+                        </configuration>
+                    </execution>
+
+                    <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
+                    <execution>
+                        <id>copy-manifest</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST-native.MF" />
+                                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST.MF" />
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.0</version>
                 <configuration>
-                    <compilerVersion>11</compilerVersion>
+                    <compilerVersion>1.8</compilerVersion>
                     <fork>true</fork>
+                    <source>11</source>
+                    <target>11</target>
                     <debug>true</debug>
                     <optimize>true</optimize>
                     <showDeprecation>true</showDeprecation>
@@ -78,329 +281,165 @@
                     </excludes>
                 </configuration>
             </plugin>
+
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
+                <groupId>org.fusesource.hawtjni</groupId>
+                <artifactId>hawtjni-maven-plugin</artifactId>
+                <version>1.18</version>
+                <executions>
+                    <execution>
+                        <id>generate-native-lib</id>
+                        <configuration>
+                            <name>${jniLibName}</name>
+                            <nativeSourceDirectory>${generatedSourcesDir}</nativeSourceDirectory>
+                            <customPackageDirectory>${templateDir}</customPackageDirectory>
+                            <windowsBuildTool>msbuild</windowsBuildTool>
+                            <windowsCustomProps>true</windowsCustomProps>
+                            <windowsPlatformToolset>v140</windowsPlatformToolset>
+                            <libDirectory>${nativeLibOnlyDir}</libDirectory>
+                            <configureArgs>
+                                <configureArg>${extraConfigureArg}</configureArg>
+                                <configureArg>${extraConfigureArg2}</configureArg>
+                                <configureArg>CFLAGS=${cflags}</configureArg>
+                                <configureArg>LDFLAGS=${ldflags} ${extraLdflags}</configureArg>
+                                <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
+                            </configureArgs>
+                        </configuration>
+                        <goals>
+                            <goal>generate</goal>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <configuration>
+                            <!-- Exclude native lib and attribution for the jar without classifier-->
+                            <excludes>
+                                <exclude>META-INF/native/**</exclude>
+                                <exclude>META-INF/license/**</exclude>
+                                <exclude>META-INF/NOTICE.txt</exclude>
+                                <exclude>META-INF/LICENSE.txt</exclude>
+                            </excludes>
+                            <archive>
+                                <manifest>
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                </manifest>
+                                <manifestEntries>
+                                    <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                                </manifestEntries>
+                                <index>true</index>
+                                <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
+                            </archive>
+                        </configuration>
+                    </execution>
+                    <!-- Generate the JAR that contains the native library in it. -->
+                    <execution>
+                        <id>native-jar</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                </manifest>
+                                <manifestEntries>
+                                    <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                                    <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
+                                </manifestEntries>
+                                <index>true</index>
+                                <manifestFile>${project.build.directory}/manifests/MANIFEST-native.MF</manifestFile>
+                            </archive>
+                            <classifier>${jni.classifier}</classifier>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- always produce osgi bundles -->
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                        <configuration>
+                            <supportedProjectTypes>
+                                <supportedProjectType>jar</supportedProjectType>
+                                <supportedProjectType>bundle</supportedProjectType>
+                            </supportedProjectTypes>
+                            <instructions>
+                                <Export-Package>${project.groupId}.*</Export-Package>
+                            </instructions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-source-plugin</artifactId>
+                <!-- Eclipse-related OSGi manifests
+                      See https://github.com/netty/netty/issues/3886
+                      More information: https://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Automatic-Module-Name>com.nukkitx.natives</Automatic-Module-Name>
+                            <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+                            <Bundle-Name>${project.name}</Bundle-Name>
+                            <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
+                            <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
+                            <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+                            <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
                         </manifestEntries>
                     </archive>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>attach-test-sources</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>test-jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <detectOfflineLinks>false</detectOfflineLinks>
+                    <breakiterator>true</breakiterator>
+                    <version>false</version>
+                    <author>false</author>
+                    <keywords>true</keywords>
+                    <source>8</source>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
-    <profiles>
-        <profile>
-            <id>mac</id>
-            <activation>
-                <os>
-                    <family>mac</family>
-                </os>
-            </activation>
-            <properties>
-                <exe.compiler>clang</exe.compiler>
-                <jni.platform>darwin</jni.platform>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <executions>
-                            <!-- Build the additional JAR that contains the native library. -->
-                            <execution>
-                                <id>native-jar</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <copy todir="${nativeJarWorkdir}">
-                                            <zipfileset src="${defaultJarFile}"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeLibOnlyDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$"
-                                                          to="META-INF/native/lib/\1"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeIncludeDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$"
-                                                          to="META-INF/native/include/\1.h"/>
-                                        </copy>
-                                        <jar destfile="${nativeJarFile}"
-                                             manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF"
-                                             basedir="${nativeJarWorkdir}" index="true"
-                                             excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST"/>
-                                        <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}"
-                                                        type="jar"/>
-                                    </target>
-                                </configuration>
-                            </execution>
-                            <!-- invoke the make file to build a static library -->
-                            <execution>
-                                <id>build-native-lib</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                                            <env key="CC" value="${exe.compiler}"/>
-                                            <env key="AR" value="${exe.archiver}"/>
-                                            <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                                            <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                                            <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                                            <env key="CFLAGS"
-                                                 value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden"/>
-                                            <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                                            <env key="LIB_NAME" value="${nativeLibName}"/>
-                                            <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
-                                                 explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
-                                                 methods which are not expected to be present on MacOS (e.g. accept4). -->
-                                            <env key="MACOSX_DEPLOYMENT_TARGET" value="10.2"/>
-                                        </exec>
-                                    </target>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>linux</id>
-            <activation>
-                <os>
-                    <family>linux</family>
-                </os>
-            </activation>
-            <properties>
-                <jni.platform>linux</jni.platform>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <executions>
-                            <!-- Build the additional JAR that contains the native library. -->
-                            <execution>
-                                <id>native-jar</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <copy todir="${nativeJarWorkdir}">
-                                            <zipfileset src="${defaultJarFile}"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeLibOnlyDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$"
-                                                          to="META-INF/native/lib/\1"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeIncludeDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$"
-                                                          to="META-INF/native/include/\1.h"/>
-                                        </copy>
-                                        <jar destfile="${nativeJarFile}"
-                                             manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF"
-                                             basedir="${nativeJarWorkdir}" index="true"
-                                             excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST"/>
-                                        <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}"
-                                                        type="jar"/>
-                                    </target>
-                                </configuration>
-                            </execution>
-                            <!-- invoke the make file to build a static library -->
-                            <execution>
-                                <id>build-native-lib</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                                            <env key="CC" value="${exe.compiler}"/>
-                                            <env key="AR" value="${exe.archiver}"/>
-                                            <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                                            <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                                            <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                                            <env key="CFLAGS"
-                                                 value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden"/>
-                                            <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                                            <env key="LIB_NAME" value="${nativeLibName}"/>
-                                        </exec>
-                                    </target>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>freebsd</id>
-            <activation>
-                <os>
-                    <family>unix</family>
-                    <name>freebsd</name>
-                </os>
-            </activation>
-            <properties>
-                <exe.compiler>clang</exe.compiler>
-                <exe.make>gmake</exe.make>
-                <jni.platform>freebsd</jni.platform>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <executions>
-                            <!-- Build the additional JAR that contains the native library. -->
-                            <execution>
-                                <id>native-jar</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <copy todir="${nativeJarWorkdir}">
-                                            <zipfileset src="${defaultJarFile}"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeLibOnlyDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$"
-                                                          to="META-INF/native/lib/\1"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeIncludeDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$"
-                                                          to="META-INF/native/include/\1.h"/>
-                                        </copy>
-                                        <jar destfile="${nativeJarFile}"
-                                             manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF"
-                                             basedir="${nativeJarWorkdir}" index="true"
-                                             excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST"/>
-                                        <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}"
-                                                        type="jar"/>
-                                    </target>
-                                </configuration>
-                            </execution>
-                            <!-- invoke the make file to build a static library -->
-                            <execution>
-                                <id>build-native-lib</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                                            <env key="CC" value="${exe.compiler}"/>
-                                            <env key="AR" value="${exe.archiver}"/>
-                                            <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                                            <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                                            <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                                            <env key="CFLAGS"
-                                                 value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden"/>
-                                            <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                                            <env key="LIB_NAME" value="${nativeLibName}"/>
-                                        </exec>
-                                    </target>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>openbsd</id>
-            <activation>
-                <os>
-                    <family>unix</family>
-                    <name>openbsd</name>
-                </os>
-            </activation>
-            <properties>
-                <exe.compiler>clang</exe.compiler>
-                <exe.make>gmake</exe.make>
-                <jni.platform>openbsd</jni.platform>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <executions>
-                            <!-- Build the additional JAR that contains the native library. -->
-                            <execution>
-                                <id>native-jar</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <copy todir="${nativeJarWorkdir}">
-                                            <zipfileset src="${defaultJarFile}"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeLibOnlyDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$"
-                                                          to="META-INF/native/lib/\1"/>
-                                        </copy>
-                                        <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                                            <zipfileset dir="${nativeIncludeDir}"/>
-                                            <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$"
-                                                          to="META-INF/native/include/\1.h"/>
-                                        </copy>
-                                        <jar destfile="${nativeJarFile}"
-                                             manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF"
-                                             basedir="${nativeJarWorkdir}" index="true"
-                                             excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST"/>
-                                        <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}"
-                                                        type="jar"/>
-                                    </target>
-                                </configuration>
-                            </execution>
-                            <!-- invoke the make file to build a static library -->
-                            <execution>
-                                <id>build-native-lib</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                                            <env key="CC" value="${exe.compiler}"/>
-                                            <env key="AR" value="${exe.archiver}"/>
-                                            <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                                            <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                                            <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                                            <env key="CFLAGS"
-                                                 value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden"/>
-                                            <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                                            <env key="LIB_NAME" value="${nativeLibName}"/>
-                                        </exec>
-                                    </target>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
+    <dependencies>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-buffer</artifactId>
+            <version>4.1.69.Final</version>
+        </dependency>
+    </dependencies>
 </project>
