@@ -28,6 +28,6 @@ components that this product depends on.
 This product is statically linked against libdeflate.
 
  * LICENSE:
-    * license/LICENSE.quiche.txt (BSD2)
+    * license/LICENSE.libdeflate.txt (BSD2)
   * HOMEPAGE:
-    * https://github.com/cloudflare/quiche
+    * https://github.com/ebiggers/libdeflate
