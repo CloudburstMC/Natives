@@ -28,7 +28,7 @@ public class Natives {
 //    );
 
     public static final NativeCode<ZlibProcessor.Factory> ZLIB = new NativeCode<>(
-            new NativeCode.Variant<>("libdeflate", () -> true, LibdeflateZlibProcessor.FACTORY),
+            new NativeCode.Variant<>("libdeflate", new LibraryLoader("cb_natives"), LibdeflateZlibProcessor.FACTORY),
             new NativeCode.Variant<>("Java 11", () -> PlatformDependent.javaVersion() >= 11, Java11ZlibProcessor.FACTORY),
             new NativeCode.Variant<>("Java", TRUE, JavaZlibProcessor.FACTORY)
     );

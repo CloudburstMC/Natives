@@ -25,7 +25,10 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
         long inAddress = input.memoryAddress() + output.readerIndex();
         long outAddress = output.memoryAddress() + output.writerIndex();
 
-        deflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes(), level);
+        int written = deflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes(), level);
+        if (written > 0) {
+            output.writerIndex(output.writerIndex() + written);
+        }
     }
 
     @Override
@@ -34,7 +37,10 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
         long inAddress = input.memoryAddress() + output.readerIndex();
         long outAddress = output.memoryAddress() + output.writerIndex();
 
-        inflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes());
+        int written = inflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes());
+        if (written > 0) {
+            output.writerIndex(output.writerIndex() + written);
+        }
     }
 
     @Override

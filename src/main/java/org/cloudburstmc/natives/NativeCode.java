@@ -48,5 +48,13 @@ public class NativeCode<T> implements Supplier<T> {
             this.availability = availability;
             this.factory = factory;
         }
+
+        public String getName() {
+            return name;
+        }
+
+        public T getFactory() {
+            return factory;
+        }
     }
 }

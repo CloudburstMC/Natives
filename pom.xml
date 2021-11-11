@@ -15,6 +15,25 @@
     <name>Natives</name>
     <packaging>jar</packaging>
 
+    <organization>
+        <name>CloudburstMC</name>
+        <url>https://cloudburstmc.org/</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/CloudburstMC/Natives</url>
+        <connection>scm:git:git://github.com/CloudburstMC/Natives.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/CloudburstMC/Natives.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
     <properties>
         <javaModuleName>org.cloudburstmc.natives</javaModuleName>
         <packaging.type>jar</packaging.type>
@@ -48,7 +67,7 @@
         <templateDir>${project.build.directory}/template</templateDir>
         <cargoTarget />
         <cflags>-std=gnu99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${libdeflateHomeIncludeDir}</cflags>
-        <ldflags>-L${libdeflateHomeBuildDir}</ldflags>
+        <ldflags>-L${libdeflateHomeBuildDir} -ldeflate</ldflags>
         <extraCmakeFlags />
         <extraCflags />
         <extraCxxflags />
@@ -380,6 +399,8 @@
                             </supportedProjectTypes>
                             <instructions>
                                 <Export-Package>${project.groupId}.*</Export-Package>
+                                <Libdeflate-Revision>${libdeflateCommitSha}</Libdeflate-Revision>
+                                <Libdeflate-Branch>${libdeflateBranch}</Libdeflate-Branch>
                             </instructions>
                         </configuration>
                     </execution>
@@ -440,6 +461,26 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-buffer</artifactId>
             <version>4.1.69.Final</version>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
