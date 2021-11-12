@@ -22,7 +22,7 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
         }
 
         // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
-        long inAddress = input.memoryAddress() + output.readerIndex();
+        long inAddress = input.memoryAddress() + input.readerIndex();
         long outAddress = output.memoryAddress() + output.writerIndex();
 
         int written = deflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes(), level);
@@ -33,14 +33,18 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
 
     @Override
     public void inflate(ByteBuf input, ByteBuf output, int limit) throws DataFormatException {
-        // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
-        long inAddress = input.memoryAddress() + output.readerIndex();
-        long outAddress = output.memoryAddress() + output.writerIndex();
+        while (output.writableBytes() < limit) {
+            // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
+            long inAddress = input.memoryAddress() + input.readerIndex();
+            long outAddress = output.memoryAddress() + output.writerIndex();
 
-        int written = inflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes());
-        if (written > 0) {
-            output.writerIndex(output.writerIndex() + written);
+            int written = inflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes());
+            if (written >= 0) {
+                return; // Data written successfully
+            }
+            output.ensureWritable(output.writableBytes() << 1); // Increase output size and try again.
         }
+        throw new IllegalArgumentException("Inflated buffer size exceeds limit of " + limit + " bytes");
     }
 
     @Override
