@@ -3,7 +3,7 @@
 # Edit at https://www.gitignore.io/?templates=java,cmake,maven,eclipse,netbeans,intellij+all
 
 ### CMake ###
-CMakeLists.txt.user
+CMakeLists.txt
 CMakeCache.txt
 CMakeFiles
 CMakeScripts

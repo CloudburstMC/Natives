@@ -37,7 +37,8 @@
     <properties>
         <javaModuleName>org.cloudburstmc.natives</javaModuleName>
         <packaging.type>jar</packaging.type>
-        <junit.version>5.7.0</junit.version>
+        <junit.version>5.8.1</junit.version>
+        <jmh.version>1.21</jmh.version>
         <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
         <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
         <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
@@ -460,7 +461,7 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-buffer</artifactId>
-            <version>4.1.69.Final</version>
+            <version>4.1.70.Final</version>
         </dependency>
 
         <!-- Test dependencies -->
@@ -480,6 +481,19 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>${jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>${jmh.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

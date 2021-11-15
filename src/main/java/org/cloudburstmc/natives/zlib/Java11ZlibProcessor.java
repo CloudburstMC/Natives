@@ -23,7 +23,7 @@ public class Java11ZlibProcessor extends AbstractReferenceCounted implements Zli
     }
 
     @Override
-    public void deflate(ByteBuf input, ByteBuf output, int level) throws DataFormatException {
+    public boolean deflate(ByteBuf input, ByteBuf output, int level) throws DataFormatException {
         Deflater deflater = this.deflaters[level];
         try {
             for (ByteBuffer buffer : input.nioBuffers()) {
@@ -47,6 +47,7 @@ public class Java11ZlibProcessor extends AbstractReferenceCounted implements Zli
         } finally {
             deflater.reset();
         }
+        return true;
     }
 
     @Override

@@ -24,7 +24,7 @@ public class JavaZlibProcessor extends AbstractReferenceCounted implements ZlibP
     }
 
     @Override
-    public void deflate(ByteBuf input, ByteBuf output, int level) {
+    public boolean deflate(ByteBuf input, ByteBuf output, int level) {
         int inputLength = input.readableBytes();
         this.inputBytes = getAndResize(this.inputBytes, inputLength);
         input.readBytes(this.inputBytes, 0, inputLength);
@@ -41,6 +41,7 @@ public class JavaZlibProcessor extends AbstractReferenceCounted implements ZlibP
         } finally {
             deflater.reset(); // Make sure we reset even if an exception is thrown
         }
+        return true;
     }
 
     @Override

@@ -16,9 +16,13 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
     }
 
     @Override
-    public void deflate(ByteBuf input, ByteBuf output, int level) throws DataFormatException {
+    public boolean deflate(ByteBuf input, ByteBuf output, int level) throws DataFormatException {
         if (level < 0 || level > 12) {
             throw new IllegalArgumentException("Compression level was out of bounds. Expected a value between 0-12 but got " + level);
+        }
+        // Extracted from libdeflate so we don't have to execute the JNI method.
+        if (input.readableBytes() < 8 || input.readableBytes() < 56 - (level * 4)) {
+            return false;
         }
 
         // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
@@ -26,9 +30,11 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
         long outAddress = output.memoryAddress() + output.writerIndex();
 
         int written = deflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes(), level);
-        if (written > 0) {
-            output.writerIndex(output.writerIndex() + written);
+        if (written == 0) {
+            return false;
         }
+        output.writerIndex(output.writerIndex() + written);
+        return true;
     }
 
     @Override
@@ -40,6 +46,7 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
 
             int written = inflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes());
             if (written >= 0) {
+                output.writerIndex(output.writerIndex() + written);
                 return; // Data written successfully
             }
             output.ensureWritable(output.writableBytes() << 1); // Increase output size and try again.

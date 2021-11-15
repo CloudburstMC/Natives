@@ -9,58 +9,61 @@ import org.cloudburstmc.natives.zlib.ZlibType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Random;
 import java.util.zip.DataFormatException;
 
 public class NativeZlibTest {
 
-    private static final ZlibProcessor.Factory FACTORY = Natives.ZLIB.get();
-    private static final NativeCode.Variant<ZlibProcessor.Factory>[] FACTORIES = Natives.ZLIB.getVariants();
+    private static final byte[] TEST_DATA;
+
+    static {
+        try {
+            TEST_DATA = Objects.requireNonNull(NativeZlibTest.class.getClassLoader().getResourceAsStream("bedrock-packet.dat")).readAllBytes();
+        } catch (Exception e) {
+            throw new AssertionError("Unable to load data", e);
+        }
+    }
 
     @Test
-    public void testZlib() throws DataFormatException {
-        System.out.println("Running test");
-
-        for (int i = FACTORIES.length - 1; i >= 0; i--) {
-            test(FACTORIES[i]);
-
-            if (FACTORIES[i].getFactory() == FACTORY) break;
+    public void testZlib() throws DataFormatException, IOException {
+        for (NativeCode.Variant<ZlibProcessor.Factory> variant : Natives.ZLIB.getAvailableVariants()) {
+            test(variant);
         }
     }
 
     private void test(NativeCode.Variant<ZlibProcessor.Factory> variant) throws DataFormatException {
         System.out.println("Testing: " + variant.getName());
-        long start = System.currentTimeMillis();
-
-        byte[] dataBuf = new byte[1 << 22]; // 2 megabytes
-        new Random().nextBytes(dataBuf);
-
+        byte[] dataBuf = TEST_DATA;
         ZlibProcessor zlib = variant.getFactory().newInstance(ZlibType.DEFLATE);
 
-        ByteBuf originalBuf = Unpooled.directBuffer(dataBuf.length);
+        long start = System.nanoTime();
+
+        ByteBuf originalBuf = Unpooled.directBuffer();
         originalBuf.writeBytes(dataBuf);
 
-        ByteBuf compressed = Unpooled.directBuffer(dataBuf.length << 1);
+        ByteBuf compressed = Unpooled.directBuffer(originalBuf.readableBytes());
 
-        zlib.deflate(originalBuf, compressed , 9);
+        Assertions.assertTrue(zlib.deflate(originalBuf, compressed, 7), "Could not decompress");
 
         // Repeat here to test .reset()
-        originalBuf = Unpooled.directBuffer(dataBuf.length);
+        originalBuf = Unpooled.directBuffer(originalBuf.readableBytes());
         originalBuf.writeBytes(dataBuf);
 
-        compressed = Unpooled.directBuffer(dataBuf.length << 1);
+        compressed = Unpooled.directBuffer(originalBuf.readableBytes());
 
-        zlib.deflate(originalBuf, compressed, 9);
+        Assertions.assertTrue(zlib.deflate(originalBuf, compressed, 7), "Could not decompress");
 
-        ByteBuf uncompressed = Unpooled.directBuffer(dataBuf.length);
+        ByteBuf uncompressed = Unpooled.directBuffer(originalBuf.readableBytes());
 
         zlib.inflate(compressed, uncompressed, 8 * 1024 * 1024);
 
         byte[] check = new byte[uncompressed.readableBytes()];
         uncompressed.readBytes(check);
 
-        long elapsed = System.currentTimeMillis() - start;
+        double elapsed = (System.nanoTime() - start) / 1_000_000D;
         System.out.println("Took: " + elapsed + "ms");
 
         Assertions.assertArrayEquals(dataBuf, check, "Results do not match");

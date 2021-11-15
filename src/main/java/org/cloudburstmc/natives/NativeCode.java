@@ -1,13 +1,14 @@
 package org.cloudburstmc.natives;
 
-import java.util.Objects;
+import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 public class NativeCode<T> implements Supplier<T> {
 
     private final Variant<T>[] variants;
-    private final Variant<T> loadedVariant;
+    private final Map<String, Variant<T>> availableVariants = new LinkedHashMap<>();
+    private final Variant<T> defaultVariant;
 
     @SafeVarargs
     public NativeCode(Variant<T>... variants) {
@@ -16,26 +17,42 @@ public class NativeCode<T> implements Supplier<T> {
 
         this.variants = variants;
 
+        Variant<T> defaultVariant = null;
+
         for (Variant<T> variant : this.variants) {
             if (variant.availability.getAsBoolean()) {
-                this.loadedVariant = variant;
-                return;
+                if (defaultVariant == null) {
+                    defaultVariant = variant;
+                }
+
+                this.availableVariants.put(variant.name, variant);
             }
         }
-        throw new IllegalStateException("No variants were able to load");
+        this.defaultVariant = defaultVariant;
+        if (defaultVariant == null) {
+            throw new IllegalStateException("No variants were able to load");
+        }
     }
 
     @Override
     public T get() {
-        return this.loadedVariant.factory;
+        return this.defaultVariant.factory;
     }
 
     public String getVariantName() {
-        return this.loadedVariant.name;
+        return this.defaultVariant.name;
     }
 
     public Variant<T>[] getVariants() {
         return variants;
+    }
+
+    public Optional<Variant<T>> getVariant(String name) {
+        return Optional.ofNullable(availableVariants.get(name));
+    }
+
+    public Collection<Variant<T>> getAvailableVariants() {
+        return Collections.unmodifiableCollection(availableVariants.values());
     }
 
     public static class Variant<T> {
