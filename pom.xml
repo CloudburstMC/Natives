@@ -11,7 +11,7 @@
 
     <groupId>org.cloudburstmc</groupId>
     <artifactId>natives</artifactId>
-    <version>0.0.1.Final-SNAPSHOT</version>
+    <version>0.0.2.Final-SNAPSHOT</version>
     <name>Natives</name>
     <packaging>jar</packaging>
 
