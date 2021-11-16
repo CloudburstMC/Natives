@@ -287,8 +287,8 @@
                 <configuration>
                     <compilerVersion>1.8</compilerVersion>
                     <fork>true</fork>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>8</source>
+                    <target>8</target>
                     <debug>true</debug>
                     <optimize>true</optimize>
                     <showDeprecation>true</showDeprecation>
