@@ -39,7 +39,7 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
 
     @Override
     public void inflate(ByteBuf input, ByteBuf output, int limit) throws DataFormatException {
-        while (output.writableBytes() < limit) {
+        while (true) {
             // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
             long inAddress = input.memoryAddress() + input.readerIndex();
             long outAddress = output.memoryAddress() + output.writerIndex();
@@ -49,7 +49,11 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
                 output.writerIndex(output.writerIndex() + written);
                 return; // Data written successfully
             }
-            output.ensureWritable(output.writableBytes() << 1); // Increase output size and try again.
+            if (output.writableBytes() < limit) {
+                output.ensureWritable(Math.min(output.writableBytes() << 1, limit)); // Increase output size and try again.
+            } else {
+                break;
+            }
         }
         throw new IllegalArgumentException("Inflated buffer size exceeds limit of " + limit + " bytes");
     }
