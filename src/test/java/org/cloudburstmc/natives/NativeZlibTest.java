@@ -21,6 +21,8 @@ public class NativeZlibTest {
 
     static {
         try {
+            // Even though the language level is Java 8, we compile with Java 11 so this can be safely ignored.
+            //noinspection Since15
             TEST_DATA = Objects.requireNonNull(NativeZlibTest.class.getClassLoader().getResourceAsStream("bedrock-packet.dat")).readAllBytes();
         } catch (Exception e) {
             throw new AssertionError("Unable to load data", e);

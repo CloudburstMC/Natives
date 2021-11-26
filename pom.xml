@@ -11,7 +11,7 @@
 
     <groupId>org.cloudburstmc</groupId>
     <artifactId>natives</artifactId>
-    <version>0.0.4.Final-SNAPSHOT</version>
+    <version>0.0.3.Final-DEBUG</version>
     <name>Natives</name>
     <packaging>jar</packaging>
 
@@ -107,7 +107,7 @@
                 <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
                 <libdeflate>libdeflate.a</libdeflate>
                 <libzlib>libzlib.a</libzlib>
-                <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
+                <extraLdflags>-Wl,-g -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
                 <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
             </properties>
         </profile>
