@@ -25,37 +25,47 @@ public class LibdeflateZlibProcessor extends AbstractReferenceCounted implements
             return false;
         }
 
-        // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
-        long inAddress = input.memoryAddress() + input.readerIndex();
-        long outAddress = output.memoryAddress() + output.writerIndex();
-
-        int written = deflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes(), level);
-        if (written == 0) {
-            return false;
-        }
-        output.writerIndex(output.writerIndex() + written);
-        return true;
-    }
-
-    @Override
-    public void inflate(ByteBuf input, ByteBuf output, int limit) throws DataFormatException {
-        while (true) {
+        ByteBuf buf = input.isContiguous() ? input.retain() : input.copy();
+        try {
             // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
             long inAddress = input.memoryAddress() + input.readerIndex();
             long outAddress = output.memoryAddress() + output.writerIndex();
 
-            int written = inflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes());
-            if (written >= 0) {
-                output.writerIndex(output.writerIndex() + written);
-                return; // Data written successfully
+            int written = deflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes(), level);
+            if (written == 0) {
+                return false;
             }
-            if (output.writableBytes() < limit) {
-                output.ensureWritable(Math.min(output.writableBytes() << 1, limit)); // Increase output size and try again.
-            } else {
-                break;
-            }
+            output.writerIndex(output.writerIndex() + written);
+            return true;
+        } finally {
+            buf.release();
         }
-        throw new IllegalArgumentException("Inflated buffer size exceeds limit of " + limit + " bytes");
+    }
+
+    @Override
+    public void inflate(ByteBuf input, ByteBuf output, int limit) throws DataFormatException {
+        ByteBuf buf = input.isContiguous() ? input.retain() : input.copy();
+        try {
+            while (true) {
+                // ByteBuf#memoryAddress will throw an exception if the buffer is not native.
+                long inAddress = input.memoryAddress() + input.readerIndex();
+                long outAddress = output.memoryAddress() + output.writerIndex();
+
+                int written = inflate(this.ctx, inAddress, input.readableBytes(), outAddress, output.writableBytes());
+                if (written >= 0) {
+                    output.writerIndex(output.writerIndex() + written);
+                    return; // Data written successfully
+                }
+                if (output.writableBytes() < limit) {
+                    output.ensureWritable(Math.min(output.writableBytes() << 1, limit)); // Increase output size and try again.
+                } else {
+                    break;
+                }
+            }
+            throw new IllegalArgumentException("Inflated buffer size exceeds limit of " + limit + " bytes");
+        } finally {
+            buf.release();
+        }
     }
 
     @Override
