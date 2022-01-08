@@ -12,6 +12,7 @@ pipeline {
             when { not { anyOf {
                 branch 'master'
                 branch 'develop'
+                branch 'rewrite'
             }}}
 
             steps {
@@ -23,6 +24,7 @@ pipeline {
                 anyOf {
                     branch 'master'
                     branch 'develop'
+                    branch 'rewrite'
                 }
             }
 
@@ -52,7 +54,7 @@ pipeline {
                     steps {
                         rtMavenRun(
                                 pom: 'pom.xml',
-                                goals: 'source:jar install',
+                                goals: 'clean source:jar install',
                                 deployerId: "maven-deployer",
                                 resolverId: "maven-resolver"
                         )
@@ -61,12 +63,15 @@ pipeline {
 
                 stage('Snapshot') {
                     when {
-                        branch 'develop'
+                        anyOf {
+                            branch 'develop'
+                            branch 'rewrite'
+                        }
                     }
                     steps {
                         rtMavenRun(
                                 pom: 'pom.xml',
-                                goals: 'source:jar install',
+                                goals: 'clean source:jar install',
                                 deployerId: "maven-deployer",
                                 resolverId: "maven-resolver"
                         )
